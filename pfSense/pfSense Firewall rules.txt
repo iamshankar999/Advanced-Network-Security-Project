@@ -1,0 +1,134 @@
+pfSense Firewall and Outbound NAT Configuration
+=====================================================
+Interfaces
+----------------------------------------
+WAN = external network uplink
+LAN = 192.168.1.0/24 (internal network)
+OPT1 = 192.168.2.0/24 (DMZ network)
+1) Firewall Rules - WAN
+---------------------------------------
+1.1) Block Private Networks (RFC 1918)
+- Interface : WAN
+- Source : RFC 1918 networks
+- Destination: any
+- Action : Block
+- Purpose : prevent spoofed private IP addresses in the WAN.
+1.2) Block Bogon Networks
+- Interface : WAN
+- Source : Bogon networks (unassigned/reserved networks)
+- Destination: any
+- Action : Block
+- Purpose : Drop incoming traffic from networks that are unassigned/reserved.
+1.3) Allow OpenVPN (UDP/1194)
+- Interface : WAN
+- Source : any
+- Destination: WAN address
+- Port : 1194 (UDP)
+- Action : Allow
+- Purpose : allow remote VPN clients to reach the OpenVPN server.
+1.4) OpenVPN Wizard Rule
+- Interface : WAN
+- Source : any
+- Destination: WAN address
+- Port : 1194 (UDP)
+- Action : Allow
+- Purpose : rule to support the OpenVPN tunnel.
+2) Firewall Rules - LAN (192.168.1.0/24)
+-----------------------------------------
+2.1) Firewall Rules - LAN - Anti-Lockout Rule
+- Interface : LAN
+- Source : LAN net
+- Destination: LAN address (firewall)
+- Port : 443/TCP
+- Action : Allow
+- Purpose : ensure continuous access to the pfSense GUI using HTTPS.
+2.2) Firewall Rules - LAN - Default IPv4 LAN Rule
+- Interface : LAN
+- Source : LAN net
+- Destination: any
+- Port : any
+- Protocol : IPv4
+- Action : Allow
+- Purpose : permit free-flowing IPv4 traffic out of the LAN for routing/NAT and connectivity testing purposes.
+2.3) Firewall Rules - LAN - Default IPv6 LAN Rule
+- Interface : LAN
+- Source : LAN net
+- Destination: any
+- Port : any
+- Protocol : IPv6
+- Action : Allow
+- Purpose : permit default IPv6 outbound access for basic functional validation.
+2.4) Firewall Rules - LAN - Allow LAN to DMZ Web Server (HTTP)
+- Interface : LAN
+- Source : LAN net
+- Destination: 192.168.2.10
+- Port : 80/TCP (HTTP)
+- Action : Allow
+- Purpose : permit internal users to access the DMZ web server over HTTP.
+3) Firewall Rules - OPT1 / DMZ (192.168.2.0/24)
+-----------------------------------------------
+3.1) Firewall Rules - OPT1 / DMZ - Allow DNS from DMZ to Firewall
+- Interface : OPT1
+- Source : OPT1 net
+- Destination: this firewall (LAN/OPT1 interface IP)
+- Port : 53/TCP
+- Action : Allow
+- Purpose : permit DMZ hosts to resolve DNS through the firewall.
+3.2) Firewall Rules - OPT1 / DMZ - Allow ICMP from DMZ to Firewall
+- Interface : OPT1
+- Source : OPT1 net
+- Destination: this firewall
+- Protocol : ICMP (echo)
+- Action : Allow
+- Purpose : enable ping to the gateway for connectivity troubleshooting.
+3.3) Firewall Rules - OPT1 / DMZ - Allow DMZ Outbound Internet
+- Interface : OPT1
+- Source : OPT1 net
+- Destination: any
+- Port : any
+- Action : Allow
+- Purpose : permit DMZ servers to access the Internet (for updates, etc.) via NAT.
+3.4) Firewall Rules - OPT1 / DMZ - Block DMZ to LAN
+- Interface : OPT1
+- Source : OPT1 net
+- Destination: LAN net
+- Port : any
+- Action : Block
+- Purpose : enforce strict isolation between the DMZ and the LAN.
+3.5) Firewall Rules - OPT1 / DMZ - Allow LAN to DMZ Web Server (mirror of LAN rule)
+- Interface : OPT1
+- Source : LAN net
+- Destination: 192.168.2.10
+- Port : 80/TCP
+- Action : Allow
+- Purpose : explicit allow for LAN → DMZ web server traffic (HTTP).
+4) Outbound NAT Configuration
+------------------------------
+4.1) NAT Mode
+- Mode : Hybrid Outbound NAT
+- Purpose : use pfSense automatic NAT rules plus custom mappings for specific subnets.
+4.2) Custom NAT Mapping (DMZ → Internet)
+- Interface : WAN
+- Source : 192.168.2.0/24 (DMZ subnet)
+- Destination: any
+- NAT Address: WAN address
+- Static Port:  disabled
+- Description: DMZ outbound NAT
+- Purpose : translate all DMZ outbound traffic to the WAN public IP.
+4.3) Automatic NAT Rules
+- Rule A:
+- Interface : WAN
+- Source : 192.168.1.0/24 (LAN) + 10.8.0.0/24 (OpenVPN tunnel)
+- Destination: any
+- NAT Address: WAN address
+- Purpose : allow internal LAN and VPN subnets to access the Internet via PAT.
+- Rule B (example of an auto-generated ISAKMP rule if present):
+- Interface : WAN
+- Source : 10.8.0.0/24 or other internal nets
+- Destination Port: 500/UDP
+- NAT Address: WAN address
+- Description: Auto-generated rule for ISAKMP / VPN helper traffic.
+Security Effect
+- NAT hides all internal (LAN + DMZ + VPN) IPs behind a single WAN public IP address.
+
+- combined with the above firewall rules, inbound traffic from outside is prevented; outbound and inter-zone traffic is permitted.

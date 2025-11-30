@@ -1,0 +1,72 @@
+[1] OVERVIEW
+
+VPN Type        : Remote Access (SSL/TLS + User Auth)
+Topology        : TUN (Layer-3 routed VPN)
+Tunnel Network  : 10.8.0.0/24
+Client Example  : Windows 10 OpenVPN GUI
+
+[2] PFSENSE OPENVPN SERVER CONFIGURATION
+
+Location in GUI:
+  VPN → OpenVPN → Servers
+
+Interface       : WAN
+Protocol / Port : UDP4 / 1194
+Device Mode     : tun
+Tunnel Network  : 10.8.0.0/24
+
+Mode / Auth:
+  Mode          : Remote Access (SSL/TLS + User Auth)
+  Server Cert   : OpenVPN-Server-Cert
+  User Example  : vpnuser
+
+[3] CLIENT EXPORT / PROFILE GENERATION
+
+Location in GUI:
+  VPN → OpenVPN → Client Export
+
+Remote Access Server: OpenVPN-Server-Cert UDP4:1194
+User Account        : vpnuser
+Certificate Name    : vpnuser
+
+Export options used:
+  - Platform        : Windows 10 / 64-bit
+  - Export Type     : Current Windows Installer (2.6.7)
+  - Config Format   : Bundled installer with embedded profile
+
+[4] WINDOWS 10 OPENVPN CLIENT DETAILS
+
+Client software:
+  - OpenVPN GUI 11.45.0.0
+  - OpenVPN core 2.6.7 (Windows, OpenSSL, LZO)
+
+[5] FIREWALL RULES – OPENVPN TAB (PFSENSE)
+
+Location in GUI:
+  Firewall → Rules → OpenVPN
+
+Rule 1:
+  Interface    : OpenVPN
+  Protocol     : IPv4 TCP
+  Source       : any (VPN clients)
+  Destination  : LAN subnets
+  Description  : Allow VPN to LAN
+
+Rule 2:
+  Interface    : OpenVPN
+  Protocol     : IPv4 *
+  Source       : any
+  Destination  : any
+  Description  : OpenVPN OpenVPN-Server-Cert wizard
+
+[6] CONNECTIVITY VALIDATION STEPS
+
+After connecting from the Windows client:
+
+1. Verify VPN address on the client:
+   - Run `ipconfig` and confirm an "OpenVPN TAP-Windows6" adapter
+     with an IP in 10.8.0.0/24 (e.g., 10.8.0.2).
+
+2. Test reachability of the DMZ web server (through VPN):
+   - `ping 192.168.2.10`
+   - Browse to `http://192.168.2.10` and confirm the Apache default page.

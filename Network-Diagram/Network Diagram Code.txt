@@ -1,0 +1,66 @@
+flowchart LR
+
+  %% ========= STYLES =========
+  classDef zone      fill:#0b1120,stroke:#1f2937,color:#e5e7eb,stroke-width:1px;
+  classDef firewall  fill:#7f1d1d,stroke:#f97373,color:#fef2f2,stroke-width:2px;
+  classDef switch    fill:#111827,stroke:#4b5563,color:#e5e7eb,stroke-width:1px;
+  classDef server    fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+  classDef client    fill:#022c22,stroke:#34d399,color:#ecfdf5,stroke-width:1px;
+  classDef vpnnode   fill:#1e293b,stroke:#818cf8,color:#e0e7ff,stroke-width:1px;
+
+  %% ========= INTERNET EDGE =========
+  Internet(("Internet"))
+  class Internet zone;
+
+  Cloud1["Cloud1 - GNS3 / VirtualBox NAT (10.0.2.0/24)"]
+  class Cloud1 zone;
+
+  Internet --- Cloud1
+
+  %% ========= FIREWALL =========
+  pfSense["pfSense Firewall (WAN 10.0.2.15, LAN 192.168.1.1, OPT1 192.168.2.1)"]
+  class pfSense firewall;
+
+  Cloud1 --> pfSense
+
+  %% ========= VPN SEGMENT =========
+  subgraph VPN["OpenVPN Tunnel 10.8.0.0/24"]
+    VPNClient["Remote Windows VPN Client (10.8.0.2)"]
+    class VPNClient vpnnode;
+  end
+
+  VPNClient -. "OpenVPN UDP 1194" .- pfSense
+
+  %% ========= LAN SEGMENT =========
+  subgraph LAN["LAN 192.168.1.0/24"]
+    SW["OpenvSwitch-1 (L2 switch)"]
+    class SW switch;
+
+    Kali["Kali Linux - Attacker (192.168.1.x)"]
+    UbuLAN["Ubuntu Client (192.168.1.x)"]
+    Win10["Windows10-1 Internal Host (192.168.1.10)"]
+
+    class Kali client;
+    class UbuLAN client;
+    class Win10 client;
+
+    pfSense -->|LAN em1| SW
+    SW --- Kali
+    SW --- UbuLAN
+    SW --- Win10
+  end
+
+  %% ========= DMZ / OPT1 SEGMENT =========
+  subgraph DMZ["DMZ / OPT1 192.168.2.0/24"]
+    WebSrv["Ubuntu Web Server (Apache2) 192.168.2.10"]
+    class WebSrv server;
+
+    pfSense -->|OPT1 em2| WebSrv
+  end
+
+  %% ========= TRAFFIC FLOWS =========
+  Kali -->|"HTTP / ICMP (allowed)"| WebSrv
+  VPNClient -->|"HTTP / HTTPS via VPN (allowed)"| WebSrv
+
+  WebSrv -. "blocked DMZ → LAN" .- Win10
+  VPNClient -. "blocked VPN → Win10" .- Win10

